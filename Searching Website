@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multisearch - Your All-in-One Search Tool</title>
+    <meta name="description" content="Multisearch Ultra: Search across multiple search engines or directly open URLs in one convenient interface.">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="icon" href="path/to/your/favicon.ico" type="image/x-icon">
+    <style>
+        body {
+            background-color: #1e1e1e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        .dark-mode {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        .search-container {
+            text-align: center;
+            max-width: 90%;
+            margin: 20px;
+        }
+        .search-box {
+            padding: 15px;
+            border-radius: 24px;
+            border: 2px solid #ccc;
+            width: 80%;
+            max-width: 400px;
+            font-size: 18px;
+            outline: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: box-shadow 0.3s ease;
+        }
+        .search-box:focus {
+            box-shadow: 0 4px 25px rgba(0, 123, 255, 0.6);
+        }
+        .select-engine {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 25px;
+            border: none;
+            width: 80%;
+            max-width: 220px;
+            outline: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .search-button {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            border: none;
+            padding: 12px 20px;
+            color: white;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 15px;
+            outline: none;
+            width: 120px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+        .search-button:hover {
+            background: linear-gradient(45deg, #0056b3, #003f7f);
+            transform: scale(1.05);
+        }
+        .dark-mode-input {
+            background-color: #333;
+            color: white;
+        }
+        .powered-by {
+            margin-top: 20px;
+            color: #888;
+            font-size: 14px;
+        }
+        #clearButton {
+            background: linear-gradient(45deg, #dc3545, #c82333);
+            border: none;
+            padding: 12px 20px;
+            color: white;
+            font-size: 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 15px;
+            outline: none;
+            width: 120px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+        #clearButton:hover {
+            background: linear-gradient(45deg, #c82333, #a71d2a);
+            transform: scale(1.05);
+        }
+        .autocomplete-items {
+            position: absolute;
+            border: 1px solid #d4d4d4;
+            border-bottom: none;
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+        }
+        .autocomplete-items div {
+            padding: 10px;
+            cursor: pointer;
+            background-color: #fff;
+            border-bottom: 1px solid #d4d4d4;
+        }
+        .autocomplete-items div:hover {
+            background-color: #e9e9e9;
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 2s linear infinite;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <input type="text" id="searchInput" class="search-box" placeholder="Search or Enter URL...">
+        <button id="voiceInput" class="search-button"></button>
+        <button id="clearButton" class="search-button"><i class="fas fa-trash"></i></button>
+        <br>
+        <select id="searchEngine" class="select-engine">
+            <option value="https://www.google.com/search?q=">Google</option>
+            <option value="https://www.bing.com/search?q=">Bing</option>
+            <option value="https://search.yahoo.com/search?p=">Yahoo</option>
+            <option value="https://duckduckgo.com/?q=">DuckDuckGo</option>
+            <option value="https://yandex.com/search/?text=">Yandex</option>
+            <option value="https://www.ecosia.org/search?q=">Ecosia</option>
+            <option value="https://gemini.google.com/app/search?q=">Gemini AI</option>
+            <option value="https://chat.openai.com/search?q=">ChatGPT AI</option>
+            <option value="url">Open in Chrome (URL)</option>
+        </select>
+        <button id="setDefault" class="search-button">Set as Default</button>
+        <br>
+        <button class="search-button" onclick="performSearch()">Search </button>
+        <button class="search-button" onclick="toggleDarkMode()">Dark Mode</button>
+        <button id="readAloud" class="search-button">Read Aloud</button>
+        <div id="loadingSpinner" class="loading-spinner"></div>
+        <div class="powered-by">©Made by Arnav Soni</div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            loadPreferences();
+            autocomplete(document.getElementById('searchInput'));
+        }
+
+        function savePreferences() {
+            localStorage.setItem('selectedEngine', document.getElementById('searchEngine').value);
+            localStorage.setItem('lastQuery', document.getElementById('searchInput').value);
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        }
+
+        function loadPreferences() {
+            document.getElementById('searchEngine').value = localStorage.getItem('selectedEngine') || 'https://www.google.com/search?q=';
+            document.getElementById('searchInput').value = localStorage.getItem('lastQuery') || '';
+            if (localStorage.getItem('darkMode') === 'true') {
+                toggleDarkMode();
+            }
+        }
+
+        function performSearch() {
+            const query = document.getElementById('searchInput').value;
+            const engine = document.getElementById('searchEngine').value;
+
+            if (!query.trim()) {
+                alert('Please enter a search query or URL!');
+                return;
+            }
+
+            if (engine === 'url') {
+                let url = isValidURL(query) ? query : 'https://' + query;
+                window.open(url, '_blank');
+            } else {
+                window.open(engine + encodeURIComponent(query), '_blank');
+            }
+
+            savePreferences();
+        }
+
+        function isValidURL(string) {
+            const urlPattern = new RegExp('^(https?:\\/\\/)?' +'((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.?)+[a-z]{2,}|' + 
+            '((\\d{1,3}\\.){3}\\d{1,3}))' + 
+            '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + 
+            '(\\?[;&a-z\\d%_.~+=-]*)?' + 
+            '(\\#[-a-z\\d_]*)?$', 'i');
+            return !!urlPattern.test(string);
+        }
+
+        function autocomplete(input) {
+            const suggestions = ["JavaScript", "HTML", "CSS", "How to make a website", "Weather today", "News"];
+            let currentFocus;
+            input.addEventListener("input", function() {
+                let val = this.value;
+                closeAllLists();
+                if (!val) return false;
+
+                currentFocus = -1;
+                const list = document.createElement("div");
+                list.setAttribute("id", this.id + "autocomplete-list");
+                list.setAttribute("class", "autocomplete-items");
+                this.parentNode.appendChild(list);
+
+                for (let i = 0; i < suggestions.length; i++) {
+                    if (suggestions[i].substr(0, val.length).toUpperCase() === val.toUpperCase()) {
+                        const item = document.createElement("div");
+                        item.innerHTML = "<strong>" + suggestions[i].substr(0, val.length) + "</strong>";
+                        item.innerHTML += suggestions[i].substr(val.length);
+                        item.addEventListener("click", function() {
+                            input.value = suggestions[i];
+                            closeAllLists();
+                        });
+                        list.appendChild(item);
+                    }
+                }
+            });
+
+            input.addEventListener("keydown", function(e) {
+                let items = document.getElementById(this.id + "autocomplete-list");
+                if (items) items = items.getElementsByTagName("div");
+                if (e.key === "ArrowDown") {
+                    currentFocus++;
+                    addActive(items);
+                } else if (e.key === "ArrowUp") {
+                    currentFocus--;
+                    addActive(items);
+                } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (currentFocus > -1) {
+                        if (items) items[currentFocus].click();
+                    }
+                }
+            });
+
+            function addActive(items) {
+                if (!items) return false;
+                removeActive(items);
+                if (currentFocus >= items.length) currentFocus = 0;
+                if (currentFocus < 0) currentFocus = items.length - 1;
+                items[currentFocus].classList.add("autocomplete-active");
+            }
+
+            function removeActive(items) {
+                for (let i = 0; i < items.length; i++) {
+                    items[i].classList.remove("autocomplete-active");
+                }
+            }
+
+            function closeAllLists(elmnt) {
+                const items = document.getElementsByClassName("autocomplete-items");
+                for (let i = 0; i < items.length; i++) {
+                    if (elmnt !== items[i] && elmnt !== input) {
+                        items[i].parentNode.removeChild(items[i]);
+                    }
+                }
+            }
+
+            document.addEventListener("click", function(e) {
+                closeAllLists(e.target);
+            });
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            document.getElementById('searchInput').classList.toggle('dark-mode-input');
+            savePreferences();
+        }
+
+        // Voice input
+        document.getElementById('voiceInput').addEventListener('click', () => {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.start();
+
+            recognition.onstart = () => {
+                document.getElementById('loadingSpinner').style.display = 'block';
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('searchInput').value = transcript;
+                document.getElementById('loadingSpinner').style.display = 'none';
+            };
+
+            recognition.onerror = (event) => {
+                alert('Voice recognition error: ' + event.error);
+                document.getElementById('loadingSpinner').style.display = 'none';
+            };
+        });
+
+        // Clear input
+        document.getElementById('clearButton').addEventListener('click', () => {
+            document.getElementById('searchInput').value = '';
+        });
+
+        // Set default search engine
+        document.getElementById('setDefault').addEventListener('click', () => {
+            savePreferences();
+            alert('Default search engine set!');
+        });
+
+        // Read aloud feature
+        document.getElementById('readAloud').addEventListener('click', () => {
+            const query = document.getElementById('searchInput').value;
+            const speech = new SpeechSynthesisUtterance(query);
+            window.speechSynthesis.speak(speech);
+        });
+
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+    </script>
+</body>
+</html
